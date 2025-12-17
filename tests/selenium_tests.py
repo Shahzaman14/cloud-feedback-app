@@ -21,7 +21,7 @@ class FeedbackAppTests(unittest.TestCase):
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         cls.driver = webdriver.Chrome(options=chrome_options)
-        cls.base_url = "http://localhost"  # Change to your deployed URL
+        cls.base_url = "http://20.44.200.76"  # Your Azure AKS deployment
         cls.driver.implicitly_wait(10)
     
     @classmethod
