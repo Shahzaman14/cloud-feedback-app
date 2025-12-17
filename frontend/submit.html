@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Feedback - Cloud Feedback System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <h2>🚀 Cloud Feedback System</h2>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="submit.html" class="active">Submit Feedback</a></li>
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="about.html">About</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Submit Form Section -->
+    <section class="submit-section">
+        <div class="container">
+            <div class="form-container">
+                <h1>📝 Submit Your Feedback</h1>
+                <p class="subtitle">We value your opinion! Share your thoughts with us.</p>
+                
+                <div id="message" class="message"></div>
+                
+                <form id="feedbackForm" class="feedback-form">
+                    <div class="form-group">
+                        <label for="name">Your Name *</label>
+                        <input type="text" id="name" name="name" required 
+                               placeholder="Enter your full name" minlength="2">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email (Optional)</label>
+                        <input type="email" id="email" name="email" 
+                               placeholder="your.email@example.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category">Category *</label>
+                        <select id="category" name="category" required>
+                            <option value="">Select a category</option>
+                            <option value="bug">🐛 Bug Report</option>
+                            <option value="feature">✨ Feature Request</option>
+                            <option value="improvement">🚀 Improvement</option>
+                            <option value="general">💬 General Feedback</option>
+                            <option value="other">📌 Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="rating">Rating *</label>
+                        <div class="rating-container">
+                            <input type="radio" name="rating" value="5" id="star5" required>
+                            <label for="star5">⭐⭐⭐⭐⭐ Excellent</label>
+                            
+                            <input type="radio" name="rating" value="4" id="star4">
+                            <label for="star4">⭐⭐⭐⭐ Good</label>
+                            
+                            <input type="radio" name="rating" value="3" id="star3">
+                            <label for="star3">⭐⭐⭐ Average</label>
+                            
+                            <input type="radio" name="rating" value="2" id="star2">
+                            <label for="star2">⭐⭐ Poor</label>
+                            
+                            <input type="radio" name="rating" value="1" id="star1">
+                            <label for="star1">⭐ Very Poor</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message">Your Feedback *</label>
+                        <textarea id="feedbackMessage" name="message" rows="6" required 
+                                  placeholder="Please share your detailed feedback here..." 
+                                  minlength="10"></textarea>
+                        <small>Minimum 10 characters</small>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Submit Feedback</span>
+                            <span class="btn-loading" style="display: none;">Submitting...</span>
+                        </button>
+                        <button type="reset" class="btn btn-secondary">Clear Form</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Cloud Feedback System | DevOps Final Exam Project</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        const form = document.getElementById('feedbackForm');
+        const messageDiv = document.getElementById('message');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnLoading = submitBtn.querySelector('.btn-loading');
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'inline';
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                category: document.getElementById('category').value,
+                rating: document.querySelector('input[name="rating"]:checked').value,
+                message: document.getElementById('feedbackMessage').value
+            };
+            
+            try {
+                const response = await fetch('/api/feedbacks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    messageDiv.className = 'message success';
+                    messageDiv.innerHTML = '✅ Thank you! Your feedback has been submitted successfully.';
+                    form.reset();
+                    
+                    // Redirect to dashboard after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                } else {
+                    throw new Error('Failed to submit feedback');
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.innerHTML = '❌ Error submitting feedback. Please try again.';
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

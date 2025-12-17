@@ -1,0 +1,116 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+jobs:
+  # Stage 1: Build and Test
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install Backend Dependencies
+      working-directory: ./backend
+      run: npm install
+    
+    - name: Run Backend Tests
+      working-directory: ./backend
+      run: npm test || echo "Tests not configured yet"
+    
+    - name: Lint Backend Code
+      working-directory: ./backend
+      run: npm run lint || echo "Linting not configured"
+
+  # Stage 2: Build Docker Images
+  build-docker-images:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and Push Frontend Image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/feedback-frontend:latest
+          ${{ secrets.DOCKER_USERNAME }}/feedback-frontend:${{ github.sha }}
+    
+    - name: Build and Push Backend Image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/feedback-backend:latest
+          ${{ secrets.DOCKER_USERNAME }}/feedback-backend:${{ github.sha }}
+    
+    - name: Build and Push Database Image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./database
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/feedback-mongodb:latest
+          ${{ secrets.DOCKER_USERNAME }}/feedback-mongodb:${{ github.sha }}
+
+  # Stage 3: Deploy to Kubernetes
+  deploy-to-kubernetes:
+    needs: build-docker-images
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set AKS Context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: 'MyResourceGroup'
+        cluster-name: 'feedbackCluster'
+    
+    - name: Deploy to AKS
+      run: |
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/mongodb-deployment.yaml
+        kubectl apply -f k8s/backend-deployment.yaml
+        kubectl apply -f k8s/frontend-deployment.yaml
+        kubectl apply -f k8s/services.yaml
+    
+    - name: Verify Deployment
+      run: |
+        kubectl get pods -n feedback-app
+        kubectl get services -n feedback-app

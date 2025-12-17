@@ -1,0 +1,116 @@
+---
+- name: Configure Web Servers
+  hosts: webservers
+  become: yes
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+    
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+      when: ansible_os_family == "Debian"
+    
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+    
+    - name: Install Docker Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+    
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+      when: ansible_os_family == "Debian"
+    
+    - name: Install npm
+      apt:
+        name: npm
+        state: present
+      when: ansible_os_family == "Debian"
+    
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+      when: ansible_os_family == "Debian"
+    
+    - name: Start and enable Nginx
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+    
+    - name: Create application directory
+      file:
+        path: /opt/feedback-app
+        state: directory
+        mode: '0755'
+    
+    - name: Configure firewall for HTTP
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+      when: ansible_os_family == "Debian"
+    
+    - name: Configure firewall for HTTPS
+      ufw:
+        rule: allow
+        port: '443'
+        proto: tcp
+      when: ansible_os_family == "Debian"
+
+- name: Configure Database Servers
+  hosts: dbservers
+  become: yes
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+    
+    - name: Install MongoDB
+      apt:
+        name: mongodb
+        state: present
+      when: ansible_os_family == "Debian"
+    
+    - name: Start and enable MongoDB
+      systemd:
+        name: mongodb
+        state: started
+        enabled: yes
+    
+    - name: Configure MongoDB to listen on all interfaces
+      lineinfile:
+        path: /etc/mongodb.conf
+        regexp: '^bind_ip'
+        line: 'bind_ip = 0.0.0.0'
+      notify: restart mongodb
+    
+    - name: Configure firewall for MongoDB
+      ufw:
+        rule: allow
+        port: '27017'
+        proto: tcp
+      when: ansible_os_family == "Debian"
+  
+  handlers:
+    - name: restart mongodb
+      systemd:
+        name: mongodb
+        state: restarted
